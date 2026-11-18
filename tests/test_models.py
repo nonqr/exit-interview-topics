@@ -88,3 +88,12 @@ def test_gsdmm_empties_extra_topics():
     result = GSDMMTopicModel(n_topics=10, seed=1).fit(TEXTS, TOKENS)
     assert result.n_topics < 10
     assert external_metrics(LABELS, result.labels)["NMI"] > 0.8
+
+
+def test_encoder_cache_depends_on_prefix():
+    # С другой инструкцией модель выдаёт другие векторы — кэш не должен их путать.
+    from src.models.embedding import Encoder
+
+    a, b = Encoder("intfloat/multilingual-e5-large-instruct"), Encoder("intfloat/multilingual-e5-large-instruct")
+    b.prefix = "Instruct: другая инструкция\nQuery: "
+    assert a._cache_path != b._cache_path

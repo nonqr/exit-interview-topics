@@ -32,6 +32,7 @@ RESULTS = ROOT / "docs" / "results"
 NOISE = "noise"
 
 ENCODERS = [
+    "intfloat/multilingual-e5-large-instruct",
     "intfloat/multilingual-e5-large",
     "intfloat/multilingual-e5-base",
     "deepvk/USER-bge-m3",
