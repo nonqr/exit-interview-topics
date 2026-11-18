@@ -31,7 +31,7 @@ docs/                 документация (описание датасет�
 notebooks/            эксперименты и сравнение моделей
 src/
   generation/         таксономия и генерация синтетического датасета
-  preprocessing/      очистка и лемматизация текста
+  preprocessing/      загрузка файлов, очистка, лемматизация, фильтр пустых ответов и дублей
   models/             LDA, NMF, эмбеддинги
   evaluation/         метрики качества
   app/                веб-интерфейс на Streamlit
@@ -47,21 +47,42 @@ pip install -r requirements.txt
 
 # пересобрать датасет из исходных текстов
 python -m src.generation.build_dataset
+
+# предобработка: отчёт, примеры «было → стало», результат в data/processed/
+python -m src.preprocessing data/raw/exit_interviews.xlsx
+
+# сколько даёт каждый шаг предобработки (метрики на эталонных метках)
+python -m src.evaluation.preprocessing_report
+
+# тесты
+pytest
 ```
 
-Описание датасета, полей и способа генерации: [docs/dataset.md](docs/dataset.md).
-Как мы оцениваем качество и почему результатам можно верить: [docs/evaluation.md](docs/evaluation.md).
+Использование в коде:
 
-```bash
-pytest   # тесты
+```python
+from src.preprocessing import TextPreprocessor, load_table, preprocess_dataframe
+
+df = load_table("data/raw/exit_interviews.xlsx")
+clean, report = preprocess_dataframe(df, "reason_text")
+print(report.as_text())
+
+TextPreprocessor().tokens("Зп маленькая, обязанностей добавили!!! 😔")
+# ['зарплата', 'маленький', 'обязанность', 'добавить']
 ```
+
+## Документация
+
+- [docs/dataset.md](docs/dataset.md) — датасет: поля, способ генерации, заложенные закономерности.
+- [docs/preprocessing.md](docs/preprocessing.md) — предобработка: шаги, решения, результаты.
+- [docs/evaluation.md](docs/evaluation.md) — как мы оцениваем качество и почему результатам можно верить.
 
 ## План по спринтам
 
 | Спринт | Недели | Результат |
 |---|---|---|
 | 1. Данные | 1–3 | Синтетический датасет с метками, репозиторий, доска задач — **готово** |
-| 2. Предобработка | 4–6 | `TextPreprocessor`: очистка, лемматизация, стоп-слова, тесты |
+| 2. Предобработка | 4–6 | `TextPreprocessor`: очистка, лемматизация, стоп-слова, тесты — **готово** |
 | 3. Моделирование | 7–9 | LDA, NMF, e5 + BERTopic, подбор числа тем, сравнение метрик |
 | 4. Интерфейс | 10–12 | Streamlit: загрузка файла, темы, графики, фильтры, выгрузка |
 | 5. Стабилизация | 13–15 | Деплой, тесты на новых данных, документация, презентация |
