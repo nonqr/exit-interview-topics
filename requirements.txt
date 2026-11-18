@@ -1,0 +1,23 @@
+# Данные
+pandas>=2.2
+numpy>=1.26
+openpyxl>=3.1
+
+# Предобработка текста
+pymorphy3>=2.0
+razdel>=0.5
+nltk>=3.9
+
+# Тематическое моделирование
+scikit-learn>=1.5
+gensim>=4.3
+sentence-transformers>=3.0
+bertopic>=0.16
+
+# Веб-интерфейс и графики
+streamlit>=1.40
+plotly>=5.24
+wordcloud>=1.9
+
+# Тесты
+pytest>=8.0
