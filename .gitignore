@@ -13,3 +13,5 @@ models_cache/
 *.npy
 data/processed/*
 !data/processed/.gitkeep
+# логи прогонов (итоговые таблицы лежат в docs/results/*.csv)
+docs/results/*.log
