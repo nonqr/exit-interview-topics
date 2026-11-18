@@ -23,8 +23,9 @@ LABELS = {  # подписываем только ключевые точки, �
     "NMF": "NMF",
     "GSDMM": "GSDMM",
     "multilingual-e5-large-instruct + hdbscan + UMAP5": "e5-instruct + HDBSCAN",
-    "multilingual-e5-large-instruct + kmeans": "e5-instruct + KMeans",
     "multilingual-e5-large + kmeans": "e5-large + KMeans",
+    "Qwen3-Embedding-4B + kmeans": "Qwen3-4B + KMeans",
+    "Qwen3-Embedding-0.6B + kmeans": "Qwen3-0.6B + KMeans",
 }
 
 
@@ -53,7 +54,7 @@ def plot_coherence_vs_ari(results: pd.DataFrame, path: str | Path | None = None)
     ax.set_ylabel("ARI — совпадение с настоящими причинами", color=TEXT_2, fontsize=10)
     ax.set_title("Связность тем не показывает, насколько темы верны", loc="left", color=TEXT,
                  fontsize=13, pad=12)
-    ax.set_ylim(-0.02, max(0.6, df["ARI"].max() + 0.05))
+    ax.set_ylim(-0.02, max(0.6, df["ARI"].max() + 0.06))
     ax.grid(color=GRID, linewidth=0.8)
     ax.set_axisbelow(True)
     for side in ("top", "right"):

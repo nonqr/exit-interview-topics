@@ -32,6 +32,8 @@ RESULTS = ROOT / "docs" / "results"
 NOISE = "noise"
 
 ENCODERS = [
+    "Qwen/Qwen3-Embedding-4B",
+    "Qwen/Qwen3-Embedding-0.6B",
     "intfloat/multilingual-e5-large-instruct",
     "intfloat/multilingual-e5-large",
     "intfloat/multilingual-e5-base",

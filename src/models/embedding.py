@@ -24,9 +24,11 @@ from src.models.base import OUTLIER, TopicModel, TopicResult, top_words
 ROOT = Path(__file__).resolve().parents[2]
 CACHE_DIR = ROOT / "models_cache" / "embeddings"
 
-# Лучшая модель по итогам сравнения (docs/modeling.md): та же e5-large, но обученная
-# понимать инструкцию — ей можно сказать, что в ответе важна причина увольнения.
-DEFAULT_MODEL = "intfloat/multilingual-e5-large-instruct"
+# Лучшая модель по итогам сравнения (docs/modeling.md). Понимает инструкцию — ей можно
+# сказать, что в ответе важна причина увольнения. Весит ~8 ГБ (bfloat16).
+DEFAULT_MODEL = "Qwen/Qwen3-Embedding-4B"
+# Лёгкая альтернатива (~2 ГБ), если не хватает памяти: качество ниже (ARI 0.42 против 0.68).
+LIGHT_MODEL = "intfloat/multilingual-e5-large-instruct"
 
 # Многие модели обучены с префиксом-инструкцией. Без него качество заметно падает.
 # e5: для кластеризации и классификации авторы рекомендуют «query: ».
