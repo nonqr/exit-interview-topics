@@ -19,6 +19,10 @@ umap-learn>=0.5
 streamlit>=1.40
 plotly>=5.24
 wordcloud>=1.9
+matplotlib>=3.8
+
+# Ноутбуки
+jupyter>=1.0
 
 # Тесты
 pytest>=8.0
