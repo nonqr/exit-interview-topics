@@ -10,6 +10,7 @@ nltk>=3.9
 
 # Тематическое моделирование
 scikit-learn>=1.5
+scipy>=1.13
 gensim>=4.3
 sentence-transformers>=3.0
 bertopic>=0.16

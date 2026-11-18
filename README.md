@@ -50,6 +50,11 @@ python -m src.generation.build_dataset
 ```
 
 Описание датасета, полей и способа генерации: [docs/dataset.md](docs/dataset.md).
+Как мы оцениваем качество и почему результатам можно верить: [docs/evaluation.md](docs/evaluation.md).
+
+```bash
+pytest   # тесты
+```
 
 ## План по спринтам
 
