@@ -41,8 +41,28 @@ PREFIXES = {
     "intfloat/multilingual-e5-large-instruct":
         "Instruct: Identify the main reason why the employee is leaving the company\nQuery: ",
     "ai-forever/FRIDA": "categorize_topic: ",
+    # Модели на основе LLM с инструкциями (формат из их документации).
+    "ai-sage/Giga-Embeddings-instruct":
+        "Instruct: Identify the main reason why the employee is leaving the company\nQuery: ",
+    "Qwen/Qwen3-Embedding-0.6B":
+        "Instruct: Identify the main reason why the employee is leaving the company\nQuery:",
+    "Qwen/Qwen3-Embedding-4B":
+        "Instruct: Identify the main reason why the employee is leaving the company\nQuery:",
     "deepvk/USER-bge-m3": "",
     "BAAI/bge-m3": "",
+}
+
+
+# Дополнительные параметры загрузки для больших моделей. bfloat16 вдвое уменьшает
+# потребление памяти. Giga-Embeddings использует собственный код модели из своего
+# репозитория (trust_remote_code); код проверен: это только архитектура сети.
+LOAD_KWARGS: dict[str, dict] = {
+    "ai-sage/Giga-Embeddings-instruct": {
+        "trust_remote_code": True,
+        "model_kwargs": {"dtype": "bfloat16", "attn_implementation": "eager", "trust_remote_code": True},
+        "config_kwargs": {"trust_remote_code": True},
+    },
+    "Qwen/Qwen3-Embedding-4B": {"model_kwargs": {"dtype": "bfloat16"}},
 }
 
 
@@ -65,7 +85,9 @@ class Encoder:
         if self.model_name not in Encoder._loaded:
             from sentence_transformers import SentenceTransformer  # тяжёлый импорт — только когда нужен
 
-            Encoder._loaded[self.model_name] = SentenceTransformer(self.model_name, device="cpu")
+            Encoder._loaded[self.model_name] = SentenceTransformer(
+                self.model_name, device="cpu", **LOAD_KWARGS.get(self.model_name, {})
+            )
         return Encoder._loaded[self.model_name]
 
     @property
