@@ -46,6 +46,7 @@ class Analysis:
     names: dict[int, str]  # номер темы → название (можно менять в интерфейсе)
     mode: str
     k_scores: dict[int, float] = field(default_factory=dict)  # силуэт для каждого k, если подбирали
+    model: TopicModel | None = None  # обученная модель: можно отнести к темам новые ответы (predict)
 
     def topic_table(self) -> pd.DataFrame:
         """Темы, отсортированные по размеру: название, число ответов, доля, ключевые слова."""
@@ -153,7 +154,7 @@ def run_analysis(
     data[TOPIC_COL] = result.labels
     data[NAME_COL] = data[TOPIC_COL].map(names)
     data[CONF_COL] = result.confidence().round(3)
-    return Analysis(data, text_col, result, report, names, mode, k_scores)
+    return Analysis(data, text_col, result, report, names, mode, k_scores, model)
 
 
 # --- правки пользователя ---------------------------------------------------------

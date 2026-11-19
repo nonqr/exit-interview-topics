@@ -37,6 +37,10 @@ ROOT = Path(__file__).resolve().parents[2]
 SOURCE_DIR = ROOT / "data" / "synthetic_source"
 RAW_DIR = ROOT / "data" / "raw"
 SEED = 42
+# Отложенный тестовый набор: ответы написаны отдельно и не участвовали в настройке модели.
+HOLDOUT_SOURCE_DIR = ROOT / "data" / "holdout_source"
+HOLDOUT_DIR = ROOT / "data" / "holdout"
+HOLDOUT_SEED = 2026
 
 SECONDARY_RE = re.compile(r"^\[(\w+)\]\s*(.+)$")
 
@@ -94,9 +98,9 @@ def skewed(base: dict[str, float], skew: dict[str, float]) -> dict[str, float]:
     return {k: v * skew.get(k, 1.0) for k, v in base.items()}
 
 
-def read_source() -> list[dict]:
+def read_source(source_dir: Path = SOURCE_DIR) -> list[dict]:
     records = []
-    for path in sorted(SOURCE_DIR.glob("*.txt")):
+    for path in sorted(source_dir.glob("*.txt")):
         topic = path.stem
         for line in path.read_text(encoding="utf-8").splitlines():
             line = line.strip()
@@ -192,9 +196,9 @@ def make_dirty(rng: random.Random, text: str) -> str:
     return text
 
 
-def build() -> pd.DataFrame:
-    rng = random.Random(SEED)
-    records = read_source()
+def build(source_dir: Path = SOURCE_DIR, seed: int = SEED, n_duplicates: int = 6, id_prefix: str = "EX") -> pd.DataFrame:
+    rng = random.Random(seed)
+    records = read_source(source_dir)
 
     rows = []
     for rec in records:
@@ -203,10 +207,11 @@ def build() -> pd.DataFrame:
         rows.append(rec)
 
     # Несколько точных дублей строк: в реальных выгрузках так выглядит двойная отправка формы.
-    rows += [dict(r) for r in rng.sample([r for r in rows if r["true_topic"] != NOISE_CODE], 6)]
+    rows += [dict(r) for r in rng.sample([r for r in rows if r["true_topic"] != NOISE_CODE], n_duplicates)]
 
-    df = pd.DataFrame(rows).sort_values("exit_date").reset_index(drop=True)
-    df.insert(0, "id", [f"EX-{i:04d}" for i in range(1, len(df) + 1)])
+    # Стабильная сортировка: одинаковые даты не перемешиваются, и результат не зависит от версии numpy.
+    df = pd.DataFrame(rows).sort_values("exit_date", kind="stable").reset_index(drop=True)
+    df.insert(0, "id", [f"{id_prefix}-{i:04d}" for i in range(1, len(df) + 1)])
     names = {t.code: t.name for t in TOPICS} | {NOISE_CODE: NOISE_NAME}
     df["true_topic_name"] = df["true_topic"].map(names)
     df["secondary_topic_name"] = df["secondary_topic"].map(names)
@@ -214,16 +219,28 @@ def build() -> pd.DataFrame:
 
 
 def main() -> None:
-    df = build()
-    RAW_DIR.mkdir(parents=True, exist_ok=True)
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Сборка синтетического датасета из исходных текстов")
+    parser.add_argument("--holdout", action="store_true",
+                        help="собрать отложенный тестовый набор (data/holdout_source → data/holdout)")
+    args = parser.parse_args()
+
+    if args.holdout:
+        df = build(HOLDOUT_SOURCE_DIR, HOLDOUT_SEED, n_duplicates=3, id_prefix="HO")
+        out_dir, name = HOLDOUT_DIR, "exit_interviews_holdout"
+    else:
+        df = build()
+        out_dir, name = RAW_DIR, "exit_interviews"
+    out_dir.mkdir(parents=True, exist_ok=True)
 
     label_cols = ["true_topic", "true_topic_name", "secondary_topic", "secondary_topic_name"]
     public = df.drop(columns=label_cols)
 
     # utf-8-sig — чтобы Excel корректно открыл кириллицу в CSV.
-    public.to_csv(RAW_DIR / "exit_interviews.csv", index=False, encoding="utf-8-sig")
-    public.to_excel(RAW_DIR / "exit_interviews.xlsx", index=False)
-    df.to_csv(RAW_DIR / "exit_interviews_labeled.csv", index=False, encoding="utf-8-sig")
+    public.to_csv(out_dir / f"{name}.csv", index=False, encoding="utf-8-sig")
+    public.to_excel(out_dir / f"{name}.xlsx", index=False)
+    df.to_csv(out_dir / f"{name}_labeled.csv", index=False, encoding="utf-8-sig")
 
     print(f"Записей: {len(df)}")
     print(df["true_topic_name"].value_counts().to_string())
