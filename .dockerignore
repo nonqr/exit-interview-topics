@@ -1,0 +1,14 @@
+.git
+.github
+.venv
+venv
+**/__pycache__
+.pytest_cache
+.ipynb_checkpoints
+models_cache
+notebooks
+docs
+tests
+data/processed
+data/raw/exit_interviews_labeled.csv
+*.log

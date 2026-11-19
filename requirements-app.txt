@@ -1,0 +1,16 @@
+# Зависимости веб-сервиса (их ставит Dockerfile). Версии проверены вместе.
+# PyTorch ставится отдельно, версией для CPU:
+#   pip install torch --index-url https://download.pytorch.org/whl/cpu
+pandas==3.0.5
+numpy==2.5.3
+openpyxl==3.1.5
+pymorphy3==2.0.6
+scikit-learn==1.9.1
+scipy==1.18.1
+sentence-transformers==6.3.0
+transformers==5.23.0
+umap-learn==0.6.0
+streamlit==1.67.0
+plotly==7.1.0
+wordcloud==1.9.6
+matplotlib==3.11.2

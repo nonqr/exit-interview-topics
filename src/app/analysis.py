@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import io
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Callable
 
 import numpy as np
@@ -18,6 +19,9 @@ from sklearn.metrics import silhouette_score
 from src.models import EmbeddingTopicModel, Encoder, NMFTopicModel, TopicModel, TopicResult
 from src.models.embedding import DEFAULT_MODEL, LIGHT_MODEL
 from src.preprocessing import PreprocessingReport, TextPreprocessor, preprocess_dataframe
+
+ROOT = Path(__file__).resolve().parents[2]
+DEMO_FILE = ROOT / "data" / "raw" / "exit_interviews.xlsx"
 
 # Режимы анализа, которые видит пользователь.
 MODES = {

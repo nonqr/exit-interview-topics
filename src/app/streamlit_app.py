@@ -19,12 +19,10 @@ import streamlit as st  # noqa: E402
 
 from src.app import charts  # noqa: E402
 from src.app.analysis import (  # noqa: E402
-    CONF_COL, DEFAULT_MODE, LOW_CONFIDENCE, MODES, NAME_COL, TOPIC_COL, Analysis, apply_names, date_columns,
+    CONF_COL, DEFAULT_MODE, DEMO_FILE, LOW_CONFIDENCE, MODES, NAME_COL, TOPIC_COL, Analysis, apply_names, date_columns,
     lift_by_segment, notable, run_analysis, segment_columns, share_by_segment, timeline, to_excel,
 )
 from src.preprocessing import guess_text_column, load_table  # noqa: E402
-
-DEMO_FILE = ROOT / "data" / "raw" / "exit_interviews.xlsx"
 
 st.set_page_config(page_title="Причины увольнений", page_icon="📋", layout="wide")
 
