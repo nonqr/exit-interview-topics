@@ -47,7 +47,7 @@ def check(df: pd.DataFrame, col: str) -> list[dict]:
         ("Новички (до 6 мес.) — из-за неинтересных задач",
          lift(df, col, df["tenure_group"] == "<6 мес", "content"), 1.3),
         ("С марта 2025 растёт доля ухода из-за графика (отмена удалёнки)",
-         share_after / share_before if share_before else 0.0, 1.5),
+         share_after / share_before if share_before else (float("inf") if share_after else 0.0), 1.5),
     ]
     rows = [{"закономерность": name, "значение": round(v, 2), "порог": thr, "видна": v >= thr}
             for name, v, thr in checks]

@@ -123,6 +123,11 @@ class Encoder:
             )
         return Encoder._loaded[self.model_name]
 
+    def __getstate__(self) -> dict:
+        # Кэш векторов не копируем вместе с объектом (например, в кэш Streamlit):
+        # он лежит на диске и при необходимости перечитывается.
+        return {**self.__dict__, "_memory": None}
+
     @property
     def _cache_name(self) -> str:
         # Префикс входит в ключ: с другой инструкцией получаются другие векторы.
@@ -207,6 +212,10 @@ class EmbeddingTopicModel(TopicModel):
         short = self.encoder.model_name.split("/")[-1]
         self.name = f"{short} + {clustering}" + (f" + UMAP{umap_dims}" if umap_dims else "")
         self.embeddings_: np.ndarray | None = None
+
+    def __getstate__(self) -> dict:
+        # Векторы обучающих ответов при копировании не нужны: для predict хватает центров тем.
+        return {**self.__dict__, "embeddings_": None}
 
     def _reduce(self, emb: np.ndarray) -> np.ndarray:
         if not self.umap_dims:
