@@ -92,6 +92,7 @@ TextPreprocessor().tokens("Зп маленькая, обязанностей д�
 - [docs/preprocessing.md](docs/preprocessing.md) — предобработка: шаги, решения, результаты.
 - [docs/modeling.md](docs/modeling.md) — модели, их сравнение и выбор.
 - [docs/app.md](docs/app.md) — веб-сервис: запуск, возможности, проверка на закономерностях.
+- [docs/how_it_works.md](docs/how_it_works.md) — **как всё устроено**: путь данных, методы простыми словами, доказательства качества, вопросы на защите.
 - [docs/deploy.md](docs/deploy.md) — запуск для показа на Kaggle (публичная ссылка), запасной запуск на своём компьютере, Hugging Face Spaces и Docker.
 - [notebooks/03_topic_modeling.ipynb](notebooks/03_topic_modeling.ipynb) — темы, которые находят модели (показ 3).
 - [docs/evaluation.md](docs/evaluation.md) — как мы оцениваем качество и почему результатам можно верить.
