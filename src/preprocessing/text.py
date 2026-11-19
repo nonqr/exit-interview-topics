@@ -103,7 +103,16 @@ def normalize_text(text: object) -> str:
     text = EMOJI_RE.sub(" ", text)
     text = REPEATED_PUNCT_RE.sub(r"\1", text)
     text = SPACES_RE.sub(" ", text).strip()
+    if _is_shouting(text):
+        # «ВСЁ ПЛОХО» → «Всё плохо»: нейросетевые модели воспринимают капслок как
+        # отдельный «стиль» и группируют такие ответы вместе независимо от смысла.
+        text = text[:1].upper() + text[1:].lower()
     return text
+
+
+def _is_shouting(text: str) -> bool:
+    letters = [c for c in text if c.isalpha()]
+    return len(letters) > 3 and sum(c.isupper() for c in letters) / len(letters) > 0.7
 
 
 def _canonical(text: str) -> str:

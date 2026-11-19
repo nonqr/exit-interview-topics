@@ -10,13 +10,19 @@ pymorphy3>=2.0
 scikit-learn>=1.5
 scipy>=1.13
 gensim>=4.3
+# PyTorch для CPU ставьте заранее, иначе pip скачает версию с CUDA (несколько ГБ):
+#   pip install torch --index-url https://download.pytorch.org/whl/cpu
 sentence-transformers>=3.0
-bertopic>=0.16
+umap-learn>=0.5
 
 # Веб-интерфейс и графики
 streamlit>=1.40
 plotly>=5.24
 wordcloud>=1.9
+matplotlib>=3.8
+
+# Ноутбуки
+jupyter>=1.0
 
 # Тесты
 pytest>=8.0

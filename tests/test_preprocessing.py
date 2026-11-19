@@ -36,6 +36,10 @@ def test_normalize_keeps_case_and_words():
     assert normalize_text("Начальник ХАМИТ") == "Начальник ХАМИТ"
 
 
+def test_normalize_fixes_all_caps():
+    assert normalize_text("ВСЁ ПЛОХО, ЗАРПЛАТА МАЛЕНЬКАЯ") == "Всё плохо, зарплата маленькая"
+
+
 # --- токены и леммы ------------------------------------------------------------
 
 
