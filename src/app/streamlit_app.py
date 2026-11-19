@@ -90,7 +90,7 @@ stop_text = st.sidebar.text_input("Дополнительные стоп-сло�
                                   help="Слова, которые не должны попадать в ключевые слова тем")
 stopwords = tuple(sorted({w.strip().lower() for w in stop_text.split(",") if w.strip()}))
 
-if st.sidebar.button("Анализировать", type="primary", use_container_width=True):
+if st.sidebar.button("Анализировать", type="primary", width="stretch"):
     file_hash = hashlib.sha1(raw).hexdigest()
     try:
         with st.spinner("Идёт анализ… Первый запуск скачивает модель — это может занять несколько минут."):
@@ -103,7 +103,7 @@ analysis: Analysis | None = st.session_state.get("analysis")
 if analysis is None:
     st.subheader("Предпросмотр файла")
     st.write(f"Строк: **{len(df)}**, колонка с ответами: **{text_col}**")
-    st.dataframe(df.head(20), use_container_width=True, hide_index=True)
+    st.dataframe(df.head(20), width="stretch", hide_index=True)
     st.info("Нажмите «Анализировать» в панели слева.")
     st.stop()
 
@@ -124,7 +124,7 @@ with tab_overview:
     st.markdown(f"**Самая частая причина:** {top['Тема']} — {top['Ответов']} ответов.")
 
     st.subheader("Распределение причин увольнения")
-    st.plotly_chart(charts.topic_shares(table), use_container_width=True)
+    st.plotly_chart(charts.topic_shares(table), width="stretch")
 
     r = analysis.report
     with st.expander("Как очищены данные"):
@@ -138,7 +138,7 @@ with tab_overview:
     if analysis.k_scores:
         with st.expander(f"Почему выбрано {analysis.result.n_topics} тем"):
             st.plotly_chart(charts.k_scores_chart(analysis.k_scores, analysis.result.n_topics),
-                            use_container_width=True)
+                            width="stretch")
             st.caption("Силуэт показывает, насколько ответы ближе к своей теме, чем к соседним. "
                        "Это подсказка: если темы кажутся слишком дробными или слишком общими, задайте число вручную.")
 
@@ -155,7 +155,7 @@ with tab_topics:
         "Ответов": [int(sizes.get(t, 0)) for t in range(analysis.result.n_topics)],
         "Ключевые слова": [", ".join(w) for w in kw],
     })
-    edited = st.data_editor(editor_df, key="names_editor", use_container_width=True, hide_index=True,
+    edited = st.data_editor(editor_df, key="names_editor", width="stretch", hide_index=True,
                             disabled=["Ответов", "Ключевые слова"],
                             column_config={"Название": st.column_config.TextColumn(width="medium")})
     new_names = dict(enumerate(edited["Название"].astype(str)))
@@ -175,7 +175,7 @@ with tab_topics:
                 words[w] = words.get(w, 0) + v
         img = charts.wordcloud_image(sorted(words.items(), key=lambda x: -x[1]))
         if img is not None:
-            st.image(img, use_container_width=True)
+            st.image(img, width="stretch")
         part = data[data[NAME_COL] == chosen]
         st.markdown(f"**{len(part)}** ответов ({len(part) / len(data):.0%} от всех)")
     with right:
@@ -207,7 +207,7 @@ with tab_segments:
             st.markdown("Заметных отличий между сегментами нет — причины распределены примерно одинаково.")
         st.subheader(f"Доля причин по колонке «{segment}», %")
         st.plotly_chart(charts.segment_heatmap(share_by_segment(analysis, segment), segment),
-                        use_container_width=True)
+                        width="stretch")
         st.caption("Каждая строка — 100% ответов этого сегмента. Чем темнее клетка, тем чаще причина.")
     if dt_cols:
         st.divider()
@@ -215,7 +215,7 @@ with tab_segments:
         freq = st.radio("Период", ["Квартал", "Месяц"], horizontal=True)
         tl = timeline(analysis, date_col, "QS" if freq == "Квартал" else "MS")
         st.subheader("Как менялась доля причин, %")
-        st.plotly_chart(charts.timeline_small_multiples(tl), use_container_width=True)
+        st.plotly_chart(charts.timeline_small_multiples(tl), width="stretch")
 
 # --- Ответы ----------------------------------------------------------------------
 
@@ -234,7 +234,7 @@ with tab_answers:
     shown = [NAME_COL, CONF_COL, text_col] + [c for c in data.columns
                                               if c not in (NAME_COL, CONF_COL, text_col, TOPIC_COL, "clean_text", "lemmas")]
     st.write(f"Показано ответов: **{len(view)}** из {len(data)}")
-    st.dataframe(view[shown], use_container_width=True, hide_index=True,
+    st.dataframe(view[shown], width="stretch", hide_index=True,
                  column_config={CONF_COL: st.column_config.ProgressColumn(min_value=0, max_value=1, format="%.2f")})
     st.download_button("Скачать результат (Excel)", to_excel(analysis), file_name="причины_увольнений.xlsx",
                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", type="primary")

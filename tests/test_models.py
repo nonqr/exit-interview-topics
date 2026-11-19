@@ -97,3 +97,48 @@ def test_encoder_cache_depends_on_prefix():
     a, b = Encoder("intfloat/multilingual-e5-large-instruct"), Encoder("intfloat/multilingual-e5-large-instruct")
     b.prefix = "Instruct: другая инструкция\nQuery: "
     assert a._cache_path != b._cache_path
+
+
+def test_bundled_embeddings_cover_demo(monkeypatch):
+    """Демо-датасет открывается без загрузки модели: все векторы лежат в data/embeddings/."""
+    import src.models.embedding as emb
+    from src.app.analysis import DEMO_FILE
+    from src.preprocessing import guess_text_column, load_table, preprocess_dataframe
+
+    monkeypatch.setattr(emb, "CACHE_DIR", emb.ROOT / "nonexistent-cache")  # только то, что в репозитории
+    data, _ = preprocess_dataframe(load_table(DEMO_FILE), guess_text_column(load_table(DEMO_FILE)))
+    texts = data.loc[data["is_meaningful"], "clean_text"].tolist()
+    for model in (emb.DEFAULT_MODEL, emb.LIGHT_MODEL):
+        encoder = emb.Encoder(model)
+        monkeypatch.setattr(encoder, "_model", lambda: (_ for _ in ()).throw(AssertionError("модель не нужна")))
+        assert encoder.encode(texts).shape[0] == len(texts)
+
+
+def test_float16_on_old_gpu(monkeypatch):
+    import torch
+
+    from src.models.embedding import DEFAULT_MODEL, LOAD_KWARGS, load_kwargs
+
+    monkeypatch.setattr(torch.cuda, "get_device_capability", lambda *a: (7, 5))  # T4
+    assert load_kwargs(DEFAULT_MODEL, "cuda")["model_kwargs"]["dtype"] == "float16"
+    assert load_kwargs(DEFAULT_MODEL, "cpu")["model_kwargs"]["dtype"] == "bfloat16"
+    assert LOAD_KWARGS[DEFAULT_MODEL]["model_kwargs"]["dtype"] == "bfloat16"  # оригинал не испорчен
+    monkeypatch.setattr(torch.cuda, "get_device_capability", lambda *a: (8, 0))  # A100
+    assert load_kwargs(DEFAULT_MODEL, "cuda")["model_kwargs"]["dtype"] == "bfloat16"
+
+
+class CompressedEncoder(FakeEncoder):
+    """Как e5: те же направления, но все векторы прижаты к общему — сходства лежат в узком диапазоне."""
+
+    def encode(self, texts):
+        v = np.hstack([super().encode(texts) * 0.1, np.ones((len(texts), 1))])
+        return v / np.linalg.norm(v, axis=1, keepdims=True)
+
+
+def test_confidence_does_not_depend_on_similarity_scale():
+    plain = EmbeddingTopicModel(n_topics=3, encoder=FakeEncoder()).fit(TEXTS, TOKENS)
+    compressed = EmbeddingTopicModel(n_topics=3, encoder=CompressedEncoder()).fit(TEXTS, TOKENS)
+    assert external_metrics(LABELS, compressed.labels)["ARI"] > 0.9
+    # Без поправки на разброс уверенность у «сжатых» векторов была бы ~1/3 у всех ответов.
+    assert np.median(compressed.confidence()) > 0.8
+    assert abs(np.median(compressed.confidence()) - np.median(plain.confidence())) < 0.1
