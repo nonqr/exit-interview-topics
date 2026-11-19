@@ -15,17 +15,39 @@ import sys
 import time
 from pathlib import Path
 
+import numpy as np
+
 from src.models.embedding import DEFAULT_MODEL, LIGHT_MODEL, Encoder, pick_device
 
 APP = Path(__file__).with_name("streamlit_app.py")
 
 
+def check_against_reference(model_name: str, n: int = 64) -> float | None:
+    """Сверить векторы, посчитанные сейчас, с эталонными из data/embeddings/.
+
+    На видеокарте модель работает в float16, а эталон посчитан на процессоре в bfloat16.
+    Векторы должны почти совпадать (косинус > 0.98). Если модель в половинной точности
+    «сломалась» (NaN, переполнение), это выяснится при запуске, а не на показе.
+    """
+    reference = Encoder(model_name)._cache()  # эталон из репозитория (и локального кэша)
+    if not reference:
+        return None
+    texts = list(reference)[:n]
+    fresh = Encoder(model_name, use_cache=False).encode(texts)
+    if not np.isfinite(fresh).all():
+        raise RuntimeError(f"{model_name}: модель выдаёт NaN — половинная точность не подходит этой видеокарте")
+    cos = float(np.mean(np.sum(fresh * np.vstack([reference[t] for t in texts]), axis=1)))
+    if cos < 0.98:
+        raise RuntimeError(f"{model_name}: векторы расходятся с эталоном (косинус {cos:.3f})")
+    return cos
+
+
 def preload(model_name: str) -> None:
     t0 = time.time()
-    encoder = Encoder(model_name, use_cache=False)
-    model = encoder._model()
-    encoder.encode(["Пробный ответ: ушёл из-за низкой зарплаты."])  # прогрев: первый вызов самый медленный
-    print(f"Модель {model_name} загружена на {model.device} за {time.time() - t0:.0f} с", flush=True)
+    model = Encoder(model_name, use_cache=False)._model()
+    cos = check_against_reference(model_name)  # заодно прогрев: первый вызов самый медленный
+    check = f", сверка с эталоном: косинус {cos:.4f}" if cos is not None else ""
+    print(f"Модель {model_name} загружена на {model.device} за {time.time() - t0:.0f} с{check}", flush=True)
 
 
 def main() -> None:
