@@ -1,0 +1,25 @@
+# Автоматическая публикация на Hugging Face Spaces после каждого изменения в main.
+# Настройка (один раз, Settings → Secrets and variables → Actions):
+#   секрет    HF_TOKEN  — токен Hugging Face с правом записи;
+#   переменная HF_SPACE — идентификатор Space, например nonqr/exit-interview-topics.
+# Пока переменная HF_SPACE не задана, публикация пропускается.
+name: Публикация на Hugging Face Spaces
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    if: ${{ vars.HF_SPACE != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install "huggingface_hub>=1.0"
+      - run: python deploy/deploy_space.py "${{ vars.HF_SPACE }}" --message "Обновление из GitHub ${GITHUB_SHA::7}"
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
