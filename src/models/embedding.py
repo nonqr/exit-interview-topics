@@ -11,7 +11,9 @@
 
 from __future__ import annotations
 
+import copy
 import hashlib
+import os
 from pathlib import Path
 from typing import Sequence
 
@@ -23,6 +25,9 @@ from src.models.base import OUTLIER, TopicModel, TopicResult, top_words
 
 ROOT = Path(__file__).resolve().parents[2]
 CACHE_DIR = ROOT / "models_cache" / "embeddings"
+# Эмбеддинги демо-датасета, посчитанные заранее и лежащие в репозитории (только чтение):
+# демо открывается сразу, без загрузки модели — даже на компьютере без видеокарты.
+BUNDLED_DIR = ROOT / "data" / "embeddings"
 
 # Лучшая модель по итогам сравнения (docs/modeling.md). Понимает инструкцию — ей можно
 # сказать, что в ответе важна причина увольнения. Весит ~8 ГБ (bfloat16).
@@ -68,6 +73,31 @@ LOAD_KWARGS: dict[str, dict] = {
 }
 
 
+def pick_device() -> str:
+    """Видеокарта, если она есть, иначе процессор. EMBEDDING_DEVICE задаёт устройство явно."""
+    if os.environ.get("EMBEDDING_DEVICE"):
+        return os.environ["EMBEDDING_DEVICE"]
+    import torch
+
+    return "cuda" if torch.cuda.is_available() else "cpu"
+
+
+def load_kwargs(model_name: str, device: str) -> dict:
+    """Параметры загрузки модели с поправкой на устройство.
+
+    bfloat16 аппаратно поддерживают только видеокарты Ampere и новее (A100, RTX 30xx).
+    На T4 и P100 (Kaggle, Colab) берём float16: столько же памяти, работает быстро.
+    """
+    kwargs = copy.deepcopy(LOAD_KWARGS.get(model_name, {}))
+    model_kwargs = kwargs.get("model_kwargs", {})
+    if device.startswith("cuda") and model_kwargs.get("dtype") == "bfloat16":
+        import torch
+
+        if torch.cuda.get_device_capability()[0] < 8:
+            model_kwargs["dtype"] = "float16"
+    return kwargs
+
+
 class Encoder:
     """Обёртка над sentence-transformers с кэшем на диске.
 
@@ -87,23 +117,30 @@ class Encoder:
         if self.model_name not in Encoder._loaded:
             from sentence_transformers import SentenceTransformer  # тяжёлый импорт — только когда нужен
 
+            device = pick_device()
             Encoder._loaded[self.model_name] = SentenceTransformer(
-                self.model_name, device="cpu", **LOAD_KWARGS.get(self.model_name, {})
+                self.model_name, device=device, **load_kwargs(self.model_name, device)
             )
         return Encoder._loaded[self.model_name]
 
     @property
-    def _cache_path(self) -> Path:
+    def _cache_name(self) -> str:
         # Префикс входит в ключ: с другой инструкцией получаются другие векторы.
         tag = hashlib.sha1(self.prefix.encode("utf-8")).hexdigest()[:8]
-        return CACHE_DIR / f"{self.model_name.replace('/', '__')}__{tag}.npz"
+        return f"{self.model_name.replace('/', '__')}__{tag}.npz"
+
+    @property
+    def _cache_path(self) -> Path:
+        return CACHE_DIR / self._cache_name
 
     def _cache(self) -> dict[str, np.ndarray]:
         if self._memory is None:
             self._memory = {}
-            if self.use_cache and self._cache_path.exists():
-                data = np.load(self._cache_path, allow_pickle=False)
-                self._memory = dict(zip(data["texts"].tolist(), data["emb"]))
+            if self.use_cache:
+                for path in (BUNDLED_DIR / self._cache_name, self._cache_path):
+                    if path.exists():
+                        data = np.load(path, allow_pickle=False)
+                        self._memory.update(zip(data["texts"].tolist(), data["emb"]))
         return self._memory
 
     def encode(self, texts: Sequence[str]) -> np.ndarray:
@@ -149,7 +186,7 @@ class EmbeddingTopicModel(TopicModel):
         umap_dims: int | None = None,
         min_cluster_size: int = 10,
         reassign_outliers: bool = True,
-        temperature: float = 0.05,
+        temperature: float = 0.67,
         seed: int = 0,
         encoder: Encoder | None = None,
     ):
@@ -160,6 +197,8 @@ class EmbeddingTopicModel(TopicModel):
         min_cluster_size: минимальный размер темы для HDBSCAN.
         reassign_outliers: отнести выбросы HDBSCAN к ближайшей теме.
         temperature: «резкость» уверенности: чем меньше, тем ближе уверенность к 0 или 1.
+                    Задаётся в единицах типичного разброса сходств, поэтому одинаково работает
+                    для моделей, у которых сходства лежат в узком диапазоне (e5) и в широком (Qwen3).
         """
         self.n_topics, self.clustering, self.umap_dims = n_topics, clustering, umap_dims
         self.min_cluster_size, self.reassign_outliers = min_cluster_size, reassign_outliers
@@ -198,10 +237,14 @@ class EmbeddingTopicModel(TopicModel):
         n = len(topics)
 
         # Центр темы — средний вектор её ответов. Уверенность — softmax близости к центрам.
+        # У разных моделей сходства «сжаты» по-разному: у e5 почти все лежат в 0.80–0.90,
+        # у Qwen3 разброс вдесятеро больше. Чтобы шкала уверенности не зависела от модели,
+        # близость измеряется в единицах типичного разброса (медиана по ответам).
         centroids = np.vstack([emb[labels == t].mean(axis=0) for t in range(n)])
         centroids /= np.linalg.norm(centroids, axis=1, keepdims=True)
         sim = emb @ centroids.T
-        z = (sim - sim.max(axis=1, keepdims=True)) / self.temperature
+        spread = float(np.median(sim.std(axis=1))) if n > 1 else 1.0
+        z = (sim - sim.max(axis=1, keepdims=True)) / (self.temperature * max(spread, 1e-6))
         doc_topic = np.exp(z) / np.exp(z).sum(axis=1, keepdims=True)
 
         if self.reassign_outliers:

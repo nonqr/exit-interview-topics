@@ -27,6 +27,7 @@ INCLUDE = [
     ".streamlit/config.toml",
     "src",
     "data/raw/exit_interviews.xlsx",
+    "data/embeddings",
 ]
 IGNORE = shutil.ignore_patterns("__pycache__", "*.pyc")
 
