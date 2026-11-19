@@ -12,10 +12,15 @@ from __future__ import annotations
 import time
 
 from src.app.analysis import DEMO_FILE, MODES, run_analysis
+from src.app.serve import preload
 from src.preprocessing import guess_text_column, load_table
 
 
 def main() -> None:
+    # Эмбеддинги демо уже лежат в data/embeddings/, поэтому анализ демо модели не загрузит:
+    # скачиваем модели явно, чтобы сервис не качал их при первом новом файле.
+    for model_name in filter(None, MODES.values()):
+        preload(model_name)
     df = load_table(DEMO_FILE)
     text_col = guess_text_column(df)
     for mode, model_name in MODES.items():
